@@ -119,7 +119,7 @@ const getMyAllPayments = catchAsync(async (req, res) => {
 
 // Get single payment
 const getPayment = catchAsync(async (req, res) => {
-  const result = await paymentService.getPaymentById(req.params.id);
+  const result = await paymentService.getPaymentById(req.params.id, req.user.id, req.user.role);
   sendResponse(res, {
     statusCode: 200,
     success: true,

@@ -127,6 +127,9 @@ const refreshToken = async (token: string) => {
 
   const user = await User.findById(varifiedToken.id);
   if (!user) throw new AppError(401, 'User not found');
+  if (!user.verified || user.status !== 'approved') {
+    throw new AppError(403, 'Account is not active');
+  }
 
   const accessToken = jwtHelpers.genaretToken(
     { id: user._id, role: user.role, email: user.email },
@@ -169,12 +172,30 @@ const verifyEmail = async (email: string, otp: string) => {
   user.otpExpiry = undefined;
   await user.save();
 
-  return { message: 'Email verified successfully' };
+  const resetToken = jwtHelpers.genaretToken(
+    { id: user._id, email: user.email, purpose: 'password-reset' },
+    config.jwt.jwtSecret as Secret,
+    '10m',
+  );
+
+  return { message: 'Email verified successfully', resetToken };
 };
 
-const resetPassword = async (email: string, newPassword: string) => {
+const resetPassword = async (email: string, newPassword: string, resetToken: string) => {
+  if (!resetToken) throw new AppError(401, 'Reset token is required');
+  const payload = jwtHelpers.verifyToken(
+    resetToken,
+    config.jwt.jwtSecret as Secret,
+  ) as JwtPayload;
+  if (payload.purpose !== 'password-reset' || payload.email !== email) {
+    throw new AppError(401, 'Invalid reset token');
+  }
+  if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) {
+    throw new AppError(400, 'Password must be at least 8 characters and contain letters and numbers');
+  }
   const user = await User.findOne({ email });
   if (!user) throw new AppError(404, 'User not found');
+  if (payload.id.toString() !== user._id.toString()) throw new AppError(401, 'Invalid reset token');
 
   user.password = newPassword;
   user.otp = undefined;

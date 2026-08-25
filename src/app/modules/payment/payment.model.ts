@@ -30,7 +30,7 @@ const paymentSchema = new Schema<IPayment>(
     },
 
     // stripe fields
-    stripeSessionId: { type: String },
+    stripeSessionId: { type: String, unique: true, sparse: true },
     stripePaymentIntentId: { type: String },
 
     // meta

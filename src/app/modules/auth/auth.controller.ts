@@ -77,8 +77,8 @@ const verifyEmail = catchAsync(async (req, res) => {
 });
 
 const resetPassword = catchAsync(async (req, res) => {
-  const { email, newPassword } = req.body;
-  const result = await authService.resetPassword(email, newPassword);
+  const { email, newPassword, resetToken } = req.body;
+  const result = await authService.resetPassword(email, newPassword, resetToken);
 
   // Set the new refreshToken in cookie
   res.cookie('refreshToken', result.refreshToken, {

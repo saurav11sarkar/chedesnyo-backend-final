@@ -22,7 +22,9 @@ const sanitizeFileName = (originalName: string) => {
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, path.join(process.cwd(), 'uploads'));
+    const uploadDirectory = path.join(process.cwd(), 'uploads');
+    fs.mkdirSync(uploadDirectory, { recursive: true });
+    cb(null, uploadDirectory);
   },
   filename: function (req, file, cb) {
     const safeName = Date.now() + '-' + sanitizeFileName(file.originalname);
@@ -34,17 +36,16 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|mp4|mov|pdf|avi|mkv/;
+    const allowedExtensions = new Set(['.jpeg', '.jpg', '.png', '.gif', '.mp4', '.mov', '.pdf', '.avi', '.mkv']);
+    const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 'application/pdf']);
     const ext = path.extname(file.originalname).toLowerCase();
-    if (allowedTypes.test(ext)) {
+    if (allowedExtensions.has(ext) && allowedMimeTypes.has(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new AppError(400, 'Only images and videos are allowed'));
+      cb(new AppError(400, 'Unsupported file type'));
     }
   },
-  // limits: {
-  //   fileSize: 50 * 1024 * 1024, // 50MB max
-  // },
+  limits: { fileSize: 50 * 1024 * 1024, files: 4 },
 });
 
 const uploadToCloudinary = async (
@@ -68,7 +69,7 @@ const uploadToCloudinary = async (
           : { transformation: { width: 500, height: 500, crop: 'limit' } }),
       },
       (error, result) => {
-        fs.unlinkSync(file.path); // remove temp file
+        fs.unlink(file.path, () => undefined);
         if (error) {
           reject(error);
         } else if (result) {

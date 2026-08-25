@@ -38,6 +38,7 @@ const moduleRoutes = [
     path: '/assigment',
     route: assigmentRouter,
   },
+  { path: '/assignment', route: assigmentRouter },
   {
     path: '/course',
     route: courseRouter,
