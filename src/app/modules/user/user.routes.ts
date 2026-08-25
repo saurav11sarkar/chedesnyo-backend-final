@@ -20,7 +20,7 @@ router.get(
   userController.getStripeDashboardLink,
 );
 
-router.post('/create-user', userController.createUser);
+router.post('/create-user', auth(userRole.admin), userController.createUser);
 
 router.get('/enrollment-history',auth(userRole.seles,userRole.business), userController.enrollmentHistory);
 

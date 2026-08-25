@@ -30,6 +30,9 @@ const createAssasmtPay = async (userId: string, assasmtId: string) => {
   const assasmt = await Assigment.findById(assasmtId).populate('user');
   if (!assasmt) throw new AppError(404, 'Assignment not found');
 
+  const existingPayment = await Payment.findOne({ user: userId, assigment: assasmtId, status: { $in: ['pending', 'approved'] } });
+  if (existingPayment) throw new AppError(409, 'A payment for this assignment already exists');
+
   // নিজের জিনিসের জন্য পেমেন্ট করতে পারবে না
   if (assasmt.user?._id.toString() === user._id.toString()) {
     throw new AppError(400, 'You cannot pay for your own assignment');
@@ -97,6 +100,9 @@ const createCoursePay = async (userId: string, courseId: string) => {
 
   const course = await Course.findById(courseId).populate('createdBy');
   if (!course) throw new AppError(404, 'Course not found');
+
+  const existingPayment = await Payment.findOne({ user: userId, course: courseId, status: { $in: ['pending', 'approved'] } });
+  if (existingPayment) throw new AppError(409, 'A payment for this course already exists');
 
   // নিজের কোর্সের জন্য পেমেন্ট করতে পারবে না
   if (course.createdBy?._id.toString() === user._id.toString()) {
@@ -580,7 +586,7 @@ const getMyAllPayments = async (userId: string, options: IOption) => {
 /**
  * ✅ Get Single Payment by ID
  */
-const getPaymentById = async (paymentId: string) => {
+const getPaymentById = async (paymentId: string, requesterId: string, requesterRole: string) => {
   const payment = await Payment.findById(paymentId)
     .populate({
       path: 'user',
@@ -606,6 +612,13 @@ const getPaymentById = async (paymentId: string) => {
 
   if (!payment) {
     throw new AppError(404, 'Payment not found');
+  }
+
+  const assignmentOwner = (payment.assigment as any)?.user?._id?.toString();
+  const courseOwner = (payment.course as any)?.createdBy?._id?.toString();
+  const buyer = (payment.user as any)?._id?.toString();
+  if (requesterRole !== 'admin' && ![assignmentOwner, courseOwner, buyer].includes(requesterId)) {
+    throw new AppError(403, 'You are not authorized to view this payment');
   }
 
   return payment;

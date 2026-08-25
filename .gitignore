@@ -140,7 +140,6 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-.vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
@@ -156,5 +155,3 @@ config.bat
 branch_structure.json
 temp_auto_push.bat
 temp_interactive_push.bat
-.env.local
-.env

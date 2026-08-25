@@ -36,6 +36,10 @@ export default {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   },
   frontendUrl: process.env.FRONTEND_URL,
+  allowedOrigins: (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   rateLimit: {
     window: process.env.RATE_LIMIT_WINDOW,
     max: process.env.RATE_LIMIT_MAX,
