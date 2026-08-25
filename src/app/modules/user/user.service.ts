@@ -50,6 +50,7 @@ const getAllUser = async (params: any, options: IOption) => {
   const whereCondition = andCondition.length > 0 ? { $and: andCondition } : {};
 
   const result = await User.find(whereCondition)
+    .select('-password -otp -otpExpiry -stripeAccountId -referredBy')
     .skip(skip)
     .limit(limit)
     .sort({ [sortBy]: sortOrder } as any);
@@ -67,7 +68,9 @@ const getAllUser = async (params: any, options: IOption) => {
 };
 
 const getUserById = async (id: string) => {
-  const user = await User.findById(id);
+  const user = await User.findById(id).select(
+    '-password -otp -otpExpiry -stripeAccountId -referredBy',
+  );
   if (!user) {
     throw new AppError(404, 'User not found');
   }

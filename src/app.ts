@@ -6,10 +6,18 @@ import notFoundError from './app/error/notFoundError';
 import globalErrorHandler from './app/middlewares/globalErrorHandler';
 import router from './app/routes/routes';
 import stripeWebhook from './app/modules/payment/stripeWebhook';
+import config from './app/config';
 const app = express();
 
 // Middlewares
-app.use(cors({ origin: '*', credentials: true }));
+app.disable('x-powered-by');
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || config.allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Origin is not allowed by CORS'));
+  },
+  credentials: true,
+}));
 app.use(cookieParser());
 
 const limiter = rateLimit({
@@ -22,8 +30,8 @@ const limiter = rateLimit({
 app.use(limiter);
 
 app.post('/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Application routes (Centralized router)
 app.use('/api/v1', router);

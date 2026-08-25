@@ -3,6 +3,7 @@ import { JwtPayload, Secret } from 'jsonwebtoken';
 import AppError from '../error/appError';
 import config from '../config';
 import { jwtHelpers } from '../helper/jwtHelpers';
+import User from '../modules/user/user.model';
 
 declare global {
   namespace Express {
@@ -24,19 +25,24 @@ const auth = (...role: string[]) => {
         config.jwt.accessTokenSecret as Secret,
       ) as JwtPayload;
 
+      const currentUser = await User.findById(varifiedToken.id).select('role status verified');
+      if (!currentUser) throw new AppError(401, 'User account no longer exists');
+      if (currentUser.status !== 'approved') throw new AppError(403, 'Your account is not approved');
+      if (!currentUser.verified) throw new AppError(403, 'Email verification is required');
+
       // Defensive check for role
       if (
         role.length &&
         (!varifiedToken ||
           !varifiedToken.role ||
-          !role.includes(varifiedToken.role))
+          !role.includes(currentUser.role as string))
       ) {
         throw new AppError(
           401,
           'You are not authorized to access this resource',
         );
       }
-      req.user = varifiedToken;
+      req.user = { ...varifiedToken, id: currentUser._id.toString(), role: currentUser.role };
       next();
     } catch (error) {
       next(error);

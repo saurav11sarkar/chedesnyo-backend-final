@@ -17,22 +17,32 @@ const requestPayout = async (
   if (amount < MIN_PAYOUT_AMOUNT)
     throw new AppError(400, `Minimum payout amount is $${MIN_PAYOUT_AMOUNT}`);
 
-  const user = await User.findById(userId);
-  if (!user) throw new AppError(404, 'User not found');
-  if ((user.balance || 0) < amount)
-    throw new AppError(400, 'Insufficient balance');
+  if (!Number.isFinite(amount)) throw new AppError(400, 'Invalid payout amount');
+  if (!['iban', 'paypal'].includes(method) || !accountDetails?.trim()) {
+    throw new AppError(400, 'Valid payout method and account details are required');
+  }
 
-  // Deduct from balance immediately (holds the amount)
-  user.balance = (user.balance || 0) - amount;
-  await user.save();
+  // Atomic balance hold prevents simultaneous requests from overspending.
+  const user = await User.findOneAndUpdate(
+    { _id: userId, balance: { $gte: amount } },
+    { $inc: { balance: -amount } },
+    { new: true },
+  );
+  if (!user) throw new AppError(400, 'User not found or insufficient balance');
 
-  const payout = await Payout.create({
-    user: userId,
-    amount,
-    method,
-    accountDetails,
-    status: 'pending',
-  });
+  let payout;
+  try {
+    payout = await Payout.create({
+      user: userId,
+      amount,
+      method,
+      accountDetails: accountDetails.trim(),
+      status: 'pending',
+    });
+  } catch (error) {
+    await User.findByIdAndUpdate(userId, { $inc: { balance: amount } });
+    throw error;
+  }
 
   return payout;
 };

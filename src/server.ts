@@ -12,7 +12,7 @@ const PORT = config.port || 5000;
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*', // Allow all origins
+    origin: config.allowedOrigins,
     credentials: true,
   },
   transports: ['websocket', 'polling'],
