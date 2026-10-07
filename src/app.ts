@@ -1,23 +1,25 @@
-import express, { Request, Response } from 'express';
-import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import express, { Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import notFoundError from './app/error/notFoundError';
 import globalErrorHandler from './app/middlewares/globalErrorHandler';
-import router from './app/routes/routes';
 import stripeWebhook from './app/modules/payment/stripeWebhook';
-import config from './app/config';
+import router from './app/routes/routes';
 const app = express();
 
 // Middlewares
 app.disable('x-powered-by');
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || config.allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Origin is not allowed by CORS'));
-  },
-  credentials: true,
-}));
+app.use(
+  cors({
+    // origin(origin, callback) {
+    //   if (!origin || config.allowedOrigins.includes(origin)) return callback(null, true);
+    //   return callback(new Error('Origin is not allowed by CORS'));
+    // },
+    origin: '*',
+    credentials: true,
+  }),
+);
 app.use(cookieParser());
 
 const limiter = rateLimit({
@@ -25,7 +27,10 @@ const limiter = rateLimit({
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: 'Too many requests, please try again later.' },
+  message: {
+    success: false,
+    message: 'Too many requests, please try again later.',
+  },
 });
 app.use(limiter);
 
