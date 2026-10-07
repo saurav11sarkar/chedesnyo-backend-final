@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { JwtPayload, Secret } from 'jsonwebtoken';
+import { JsonWebTokenError, JwtPayload, Secret } from 'jsonwebtoken';
 import AppError from '../error/appError';
 import config from '../config';
 import { jwtHelpers } from '../helper/jwtHelpers';
@@ -45,6 +45,9 @@ const auth = (...role: string[]) => {
       req.user = { ...varifiedToken, id: currentUser._id.toString(), role: currentUser.role };
       next();
     } catch (error) {
+      if (error instanceof JsonWebTokenError) {
+        return next(new AppError(401, 'Invalid or expired access token'));
+      }
       next(error);
     }
   };
