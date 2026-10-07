@@ -2,6 +2,8 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
+import config from './app/config';
+import AppError from './app/error/appError';
 import notFoundError from './app/error/notFoundError';
 import globalErrorHandler from './app/middlewares/globalErrorHandler';
 import stripeWebhook from './app/modules/payment/stripeWebhook';
@@ -10,13 +12,15 @@ const app = express();
 
 // Middlewares
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 app.use(
   cors({
-    // origin(origin, callback) {
-    //   if (!origin || config.allowedOrigins.includes(origin)) return callback(null, true);
-    //   return callback(new Error('Origin is not allowed by CORS'));
-    // },
-    origin: '*',
+    origin(origin, callback) {
+      if (!origin || config.allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new AppError(403, 'Origin is not allowed by CORS'));
+    },
     credentials: true,
   }),
 );
