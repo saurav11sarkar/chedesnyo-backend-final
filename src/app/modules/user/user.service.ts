@@ -148,15 +148,25 @@ const createStripeAccount = async (userId: string) => {
   const user = await User.findById(userId);
   if (!user) throw new AppError(404, 'User not found');
 
+  if (!config.frontendUrl) {
+    throw new AppError(500, 'Frontend URL is not configured');
+  }
+  const frontendUrl = new URL(config.frontendUrl);
+  if (!['https:', 'http:'].includes(frontendUrl.protocol)) {
+    throw new AppError(500, 'Frontend URL is invalid');
+  }
+
   // যদি Stripe Account না থাকে, create
   if (!user.stripeAccountId) {
-    const account = await stripe.accounts.create({
-      type: 'express',
-      email: user.email,
-      business_type: 'individual',
-      business_profile: { url: 'https://your-default-website.com' },
-      metadata: { contractorId: userId },
-    });
+    const account = await stripe.accounts.create(
+      {
+        type: 'express',
+        email: user.email,
+        business_type: 'individual',
+        metadata: { contractorId: userId },
+      },
+      { idempotencyKey: `connect-account-${userId}` },
+    );
 
     user.stripeAccountId = account.id;
     await user.save();
@@ -165,14 +175,44 @@ const createStripeAccount = async (userId: string) => {
   // Onboarding link
   const accountLink = await stripe.accountLinks.create({
     account: user.stripeAccountId,
-    refresh_url: `${config.frontendUrl}/connect/refresh`,
-    return_url: `${config.frontendUrl}/stripe-account-success`,
+    refresh_url: new URL('/connect/refresh', frontendUrl).toString(),
+    return_url: new URL('/stripe-account-success', frontendUrl).toString(),
     type: 'account_onboarding',
   });
 
   return {
     url: accountLink.url,
     message: 'Stripe onboarding link created successfully',
+  };
+};
+
+// Returning from onboarding does not prove that Stripe has verified the account.
+const getStripeAccountStatus = async (userId: string) => {
+  const user = await User.findById(userId).select('stripeAccountId');
+  if (!user) throw new AppError(404, 'User not found');
+
+  if (!user.stripeAccountId) {
+    return {
+      hasAccount: false,
+      detailsSubmitted: false,
+      chargesEnabled: false,
+      payoutsEnabled: false,
+      needsMoreInformation: false,
+      verificationPending: false,
+    };
+  }
+
+  const account = await stripe.accounts.retrieve(user.stripeAccountId);
+  return {
+    hasAccount: true,
+    detailsSubmitted: account.details_submitted,
+    chargesEnabled: account.charges_enabled,
+    payoutsEnabled: account.payouts_enabled,
+    needsMoreInformation:
+      !account.details_submitted ||
+      !!account.requirements?.currently_due?.length ||
+      !!account.requirements?.past_due?.length,
+    verificationPending: !!account.requirements?.pending_verification?.length,
   };
 };
 
@@ -183,6 +223,11 @@ const getStripeDashboardLink = async (userId: string) => {
   const user = await User.findById(userId);
   if (!user || !user.stripeAccountId)
     throw new AppError(404, 'Stripe account not found');
+
+  const account = await stripe.accounts.retrieve(user.stripeAccountId);
+  if (!account.details_submitted) {
+    return createStripeAccount(userId);
+  }
 
   const loginLink = await stripe.accounts.createLoginLink(user.stripeAccountId);
 
@@ -285,6 +330,7 @@ export const userService = {
   profile,
   updateStatus,
   createStripeAccount,
+  getStripeAccountStatus,
   getStripeDashboardLink,
   enrollmentHistory,
   setCommissionRate,

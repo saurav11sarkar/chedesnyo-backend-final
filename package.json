@@ -13,6 +13,8 @@
     "prettier": "prettier --ignore-path .gitignore --write \"./src/**/*.+(js|ts|json)\"",
     "prettier:fix": "prettier --write src",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "test:stripe-account": "node tests/stripe-account.test.cjs",
+    "test:email": "node tests/email.test.cjs",
     "build-and-start": "npm run build && npm run start:prod"
   },
   "keywords": [],
