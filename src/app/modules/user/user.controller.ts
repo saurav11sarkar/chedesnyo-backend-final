@@ -99,6 +99,17 @@ const createStripeAccount = catchAsync(async (req, res) => {
   });
 });
 
+const getStripeAccountStatus = catchAsync(async (req, res) => {
+  const result = await userService.getStripeAccountStatus(req.user.id);
+  res.setHeader('Cache-Control', 'no-store');
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Stripe account status fetched successfully',
+    data: result,
+  });
+});
+
 // Dashboard লিংক নেবে
 const getStripeDashboardLink = catchAsync(async (req, res) => {
   const userId = req.user?.id;
@@ -157,6 +168,7 @@ export const userController = {
   profile,
   updateStatus,
   createStripeAccount,
+  getStripeAccountStatus,
   getStripeDashboardLink,
   enrollmentHistory,
   setCommissionRate,

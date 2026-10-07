@@ -6,6 +6,12 @@ import { userRole } from './user.constant';
 
 const router = express.Router();
 
+router.get(
+  '/stripe-account-status',
+  auth(userRole.business, userRole.seles),
+  userController.getStripeAccountStatus,
+);
+
 // কন্ট্রাক্টর Stripe account তৈরি করবে
 router.post(
   '/create-stripe-account',
