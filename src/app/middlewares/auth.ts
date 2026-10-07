@@ -46,11 +46,9 @@ const auth = (...role: string[]) => {
       next();
     } catch (error) {
       if (error instanceof JsonWebTokenError) {
-        // TokenExpiredError and NotBeforeError inherit from JsonWebTokenError.
-        next(new AppError(401, 'Your session is invalid or expired. Please sign in again'));
-      } else {
-        next(error);
+        return next(new AppError(401, 'Invalid or expired access token'));
       }
+      next(error);
     }
   };
 };

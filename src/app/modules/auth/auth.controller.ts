@@ -6,7 +6,12 @@ import { authService } from './auth.service';
 const registerUser = catchAsync(async (req, res) => {
   const payload = {
     ...req.body,
-    ref: req.query.ref as string | undefined,
+    ref:
+      typeof req.query.ref === 'string'
+        ? req.query.ref
+        : typeof req.body?.ref === 'string'
+          ? req.body.ref
+          : undefined,
     tosIp: req.ip || req.socket?.remoteAddress,
   };
   const result = await authService.registerUser(payload);

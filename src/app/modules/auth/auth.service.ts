@@ -12,8 +12,41 @@ import createOtpTemplate from '../../utils/createOtpTemplate';
 import { userRole } from '../user/user.constant';
 
 const registerUser = async (
-  payload: Partial<IUser> & { ref?: string; tosIp?: string },
+  input: Partial<IUser> & { ref?: string; tosIp?: string },
 ) => {
+  if (input.role !== userRole.business && input.role !== userRole.seles) {
+    throw new AppError(400, 'Registration role must be business or seles');
+  }
+  if (typeof input.email !== 'string' || typeof input.password !== 'string') {
+    throw new AppError(400, 'Email and password must be strings');
+  }
+
+  // Public registration accepts profile fields only; account privileges are server-controlled.
+  const payload: Partial<IUser> & { ref?: string; tosIp?: string } = {
+    firstName: input.firstName,
+    lastName: input.lastName,
+    businessName: input.businessName,
+    email: input.email,
+    password: input.password,
+    role: input.role,
+    goal: input.goal,
+    overviewExperience: input.overviewExperience,
+    specialties: input.specialties,
+    achievements: input.achievements,
+    portfolio: input.portfolio,
+    phone: input.phone,
+    location: input.location,
+    industry: input.industry,
+    kvkVatNumber: input.kvkVatNumber,
+    vatNumber: input.vatNumber,
+    website: input.website,
+    companyAddress: input.companyAddress,
+    ref: typeof input.ref === 'string' ? input.ref : undefined,
+    tosIp: input.tosIp,
+    status: 'pending',
+    verified: false,
+  };
+
   const exist = await User.findOne({ email: payload.email });
   if (exist) throw new AppError(400, 'User already exists');
 
@@ -28,11 +61,6 @@ const registerUser = async (
     if (!payload.industry) throw new AppError(400, 'Industry is required');
     if (!payload.kvkVatNumber)
       throw new AppError(400, 'KVK/VAT number is required');
-  }
-
-  if (payload.role === userRole.admin) {
-    payload.status = 'approved';
-    payload.verified = true;
   }
 
   // Referral tracking — ?ref=<referralCode>
@@ -59,25 +87,19 @@ const registerUser = async (
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   payload.otp = otp;
   payload.otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
-  payload.verified = payload.verified ?? false;
+  payload.verified = false;
 
   const user = await User.create(payload);
 
-  // Send verification OTP (skip for admin)
-  if (user.role !== userRole.admin) {
-    await sendMailer(
-      user.email,
-      user.firstName + ' ' + (user.lastName || ''),
-      createOtpTemplate(otp, user.email, 'DealClosedPartner'),
-    );
-  }
+  await sendMailer(
+    user.email,
+    user.firstName + ' ' + (user.lastName || ''),
+    createOtpTemplate(otp, user.email, 'DealClosedPartner'),
+  );
 
   const { password, otp: _otp, ...userWithoutSensitive } = user.toObject();
   return {
-    message:
-      user.role === userRole.admin
-        ? 'Admin account created'
-        : 'Registration successful. Please check your email for the OTP to verify your account.',
+    message: 'Registration successful. Please check your email for the OTP to verify your account.',
     user: userWithoutSensitive,
   };
 };
