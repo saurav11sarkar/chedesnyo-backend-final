@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { JwtPayload, Secret } from 'jsonwebtoken';
+import { JsonWebTokenError, JwtPayload, Secret } from 'jsonwebtoken';
 import AppError from '../error/appError';
 import config from '../config';
 import { jwtHelpers } from '../helper/jwtHelpers';
@@ -45,7 +45,12 @@ const auth = (...role: string[]) => {
       req.user = { ...varifiedToken, id: currentUser._id.toString(), role: currentUser.role };
       next();
     } catch (error) {
-      next(error);
+      if (error instanceof JsonWebTokenError) {
+        // TokenExpiredError and NotBeforeError inherit from JsonWebTokenError.
+        next(new AppError(401, 'Your session is invalid or expired. Please sign in again'));
+      } else {
+        next(error);
+      }
     }
   };
 };
