@@ -4,10 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
-    "start:prod": "node ./dist/server.js",
-    "start:dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev": "node init && ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "node init && tsc",
+    "start:prod": "node init && node ./dist/server.js",
+    "start:dev": "node init && ts-node-dev --respawn --transpile-only src/server.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "prettier": "prettier --ignore-path .gitignore --write \"./src/**/*.+(js|ts|json)\"",
@@ -15,7 +15,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:stripe-account": "node tests/stripe-account.test.cjs",
     "test:email": "node tests/email.test.cjs",
-    "build-and-start": "npm run build && npm run start:prod"
+    "build-and-start": "node init && npm run build && npm run start:prod"
   },
   "keywords": [],
   "author": "",
